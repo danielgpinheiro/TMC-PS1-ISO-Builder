@@ -1,0 +1,7 @@
+output/
+builder/build/
+__pycache__/
+*.gba
+*.dat
+*.DAT
+.DS_Store
