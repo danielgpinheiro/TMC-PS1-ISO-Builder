@@ -19,6 +19,8 @@ cartridge directly; the PS1 can't, so everything is converted **once, on your co
   the CD drive is free for the game's data.
 - **Per-area packs** → each area's most-needed data copied back to back on the disc and read at the area change, so
   play inside the area rarely waits for the CD.
+- **A global set** → Link's common sprite pages and the effects every area uses, read once at boot and kept in video
+  memory for the whole game, so the first roll, pickup or lifted pot of a room doesn't wait for the CD.
 - **Text** → the save messages reworded for the memory card.
 - **The executable and its code overlays** carry tables that are also in the ROM; they are shipped with those bytes
   taken out (`bin/files/holes.json` says where) and completed from your ROM, then checked against the original build's

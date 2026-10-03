@@ -102,6 +102,7 @@ def main():
     step('spu samples', os.path.join(TOOLS, 'snd_samples.py'), rom, audio, tmc)
     step('room manifests', os.path.join(TOOLS, 'room_sets.py'), 'build', rom, os.path.join(tmc, 'ROOMS.BIN'))
     step('area packs*', os.path.join(TOOLS, 'area_packs.py'), rom, tmc)
+    step('global set*', os.path.join(TOOLS, 'global_hot.py'), 'build', rom, tmc)
     shutil.copy(os.path.join(BIN, 'LOADICON.BIN'), os.path.join(tmc, 'LOADICON.BIN'))
     exe = os.path.join(files, 'TMCPS1.EXE')
     os.makedirs(os.path.join(tmc, 'OVL'))
