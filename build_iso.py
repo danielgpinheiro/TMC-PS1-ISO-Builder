@@ -6,8 +6,8 @@
 1. checks the tools (mkpsxiso, a C compiler, a C++20 compiler) and the ROM (the USA release, SHA-1);
 2. completes the prebuilt executable and code overlays (bin/files: the runs they share with the ROM were taken out,
    bin/files/holes.json says where) from your ROM, and checks each against the build's SHA-256;
-3. converts the ROM for the PlayStation (the virtual ROM, song data, SPU samples, the music stream rendered with
-   agbplay, the per-room load manifests): builder/tools/ps1, the same converters as the port;
+3. converts the ROM for the PlayStation (the virtual ROM, the per-area packs, song data and SPU samples for the
+   sequenced music, the per-room load manifests): builder/tools/ps1, the same converters as the port;
 4. builds the disc with mkpsxiso and verifies it byte by byte (EDC/ECC, license sectors, every file);
 5. writes output/TMC-PS1.bin + .cue + SHA256SUMS.
 
@@ -36,9 +36,8 @@ def find_tools():
     if not mk:
         sys.exit('mkpsxiso not found: install it (https://github.com/Lameguy64/mkpsxiso) or set MKPSXISO=/path/to/mkpsxiso')
     env['MKPSXISO'] = mk
-    for cc in ('cc', 'c++'):
-        if not shutil.which(cc):
-            sys.exit('%s not found: a C and a C++20 compiler are needed (Xcode command line tools, gcc or clang)' % cc)
+    if not shutil.which('cc'):
+        sys.exit('cc not found: a C compiler is needed (Xcode command line tools, gcc or clang)')
     return env
 
 
@@ -101,12 +100,8 @@ def main():
         step('samples', os.path.join(TOOLS, 'audio_pack.py'), rom, audio)
     step('song data', os.path.join(TOOLS, 'snd_pack.py'), rom, tmc)
     step('spu samples', os.path.join(TOOLS, 'snd_samples.py'), rom, audio, tmc)
-    music = os.path.join(work, 'music', 'MUSIC.BIN')
-    if not os.path.isfile(music):
-        print('[music] rendering the songs with agbplay (a few minutes)', flush=True)
-        step('music', os.path.join(TOOLS, 'music_pack.py'), rom, music)
-    shutil.copy(music, os.path.join(tmc, 'MUSIC.BIN'))
     step('room manifests', os.path.join(TOOLS, 'room_sets.py'), 'build', rom, os.path.join(tmc, 'ROOMS.BIN'))
+    step('area packs*', os.path.join(TOOLS, 'area_packs.py'), rom, tmc)
     shutil.copy(os.path.join(BIN, 'LOADICON.BIN'), os.path.join(tmc, 'LOADICON.BIN'))
     exe = os.path.join(files, 'TMCPS1.EXE')
     os.makedirs(os.path.join(tmc, 'OVL'))

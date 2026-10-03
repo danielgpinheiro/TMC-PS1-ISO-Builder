@@ -32,7 +32,7 @@ def export(out):
     json.dump(room_geom.header_offsets(), open(os.path.join(out, 'room_header_offsets.json'), 'w'))
     json.dump(build_vrom.low_b_labels(), open(os.path.join(out, 'low_b_labels.json'), 'w'))
     g, per = snd_sets.song_sets()
-    json.dump({'stream': sorted(snd_sets.stream_songs()), 'global': sorted(g),
+    json.dump({'stream': sorted(snd_sets.bgm_songs()), 'global': sorted(g),
                'areas': {str(a): sorted(v) for a, v in per.items()}}, open(os.path.join(out, 'snd_sets.json'), 'w'))
     print('repo_meta: %s written' % out)
 

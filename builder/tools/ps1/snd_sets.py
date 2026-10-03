@@ -8,7 +8,8 @@ data) and tools/ps1/snd_samples.py (SPU samples).
     region's script folder names (data/scripts/<region>, SCRIPT_AREAS), and those tmc_pc played there (the room tours'
     areas.json; the route's sound log, each song start in the area of its frame from the route's trace).
 Anything else loads when it starts (song data) or is a miss (samples): counted on the PS1.
-The BGM player's songs are streamed (tools/ps1/music_pack.py, docs/36 5.5): no song data or samples for them.
+The BGM player's songs are sequenced like the rest (choice 122); with PS1_MUSIC_STREAM=1 they are streamed instead
+(tools/ps1/music_pack.py, docs/36 5.5): no song data or samples for them then.
 """
 import collections, glob, json, os, re
 
@@ -36,7 +37,15 @@ def enum_values(path, prefix_re):
 
 
 def stream_songs():
-    """the song ids src/sound.c's gSongTable puts on the BGM player (31): streamed"""
+    """the song ids src/sound.c's gSongTable puts on the BGM player (31) when they are streamed (PS1_MUSIC_STREAM=1,
+    docs/36 choice 67); none by default: the music is sequenced from the areas' sound banks (choice 122)"""
+    if os.environ.get('PS1_MUSIC_STREAM', '0') != '1':
+        return set()
+    return bgm_songs()
+
+
+def bgm_songs():
+    """the song ids src/sound.c's gSongTable puts on the BGM player (31)"""
     import repo_meta  # (the public builder: TMC_META, docs/36 11)
     if repo_meta.meta_dir():
         return set(repo_meta.load('snd_sets.json')['stream'])
@@ -88,6 +97,21 @@ def song_sets():
         if os.path.exists(p):
             for a, v in json.load(open(p)).items():
                 per[int(a)] |= set(v.get('songs', []))
+    # the area's own music (gAreaMetadata[area].queueBgm: what an area change queues, src/gameUtils.c), now that the BGM
+    # is sequenced from the area's sound bank (choice 122)
+    meta = open(os.path.join(REPO, 'src', 'data', 'areaMetadata.c')).read()
+    body = meta[meta.index('gAreaMetadata[] = {'):]
+    for a, entry in enumerate(re.findall(r'\{([^{}]*)\}', body[:body.index('};')])):
+        name = entry.split(',')[-1].strip()
+        if name in sound and sound[name]:
+            per[a].add(sound[name])
+    # what the PS1's own runs heard per area (tools/ps1/snd_areas.py: the route, the tours, the whole game; choice 122)
+    sa = os.path.join(REPO, 'tools', 'ps1', 'play', 'snd_areas.txt')
+    if os.path.exists(sa):
+        for line in open(sa):
+            p = line.split()
+            if len(p) == 2:
+                per[int(p[0])].add(int(p[1]))
     play = os.path.join(REPO, 'tools', 'ps1', 'play')
     area_at = {}
     for line in open(os.path.join(play, 'newgame.ref.txt')):

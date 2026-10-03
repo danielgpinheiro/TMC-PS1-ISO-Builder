@@ -67,6 +67,62 @@ def song_voices(rom, songs):
     return out
 
 
+def bank_songs_bytes(odir):
+    """song id -> SPU bytes of its blob (TMC/SND.BIN's index, tools/ps1/snd_pack.py run first into the same folder)"""
+    d = open(os.path.join(odir, 'SND.BIN'), 'rb').read()
+    n = struct.unpack_from('<I', d, 4)[0]
+    return {i: struct.unpack_from('<IIHH', d, 16 + 12 * i)[2] for i in range(n)}
+
+
+def fit_banks(rom, sdir, odir, tool, voices, items):
+    """docs/36 choice 122 (Legend of Mana's per-scene sound bank): each area's bank = the global samples and songs +
+    the area's, all in SPU RAM at once. An area whose bank doesn't fit gets its largest own DirectSound samples
+    re-encoded at 3/4 of their rate (again if needed, down to 1/2) until it does; printed. Returns the new items."""
+    import audio_pack
+    song_bytes = bank_songs_bytes(odir)
+    glob_songs, area_songs = snd_sets.song_sets()
+    by = {it[0]: list(it) for it in items}
+    index = json.load(open(os.path.join(sdir, 'samples.json')))
+
+    def samples_of(ids):
+        out = set()
+        for sid in ids:
+            v = voices.get(sid)
+            if v:
+                out |= {w + R for w in v['samples']} | {w + R for w in v['waves']}
+                if v['square']:
+                    out |= {0xFFFFFFF0 + d for d in range(4)}
+        return out
+    glob_set = samples_of(glob_songs) | {0xFFFFFFF0 + d for d in range(4)}
+    size = lambda g: (len(by[g][1]) + 63) & ~63 if g in by else 0
+    gbytes = sum(size(g) for g in glob_set) + sum(song_bytes.get(x, 0) for x in glob_songs)
+    scale, tmp = {}, os.path.join(sdir, 'fit_tmp')
+    for a in range(256):
+        own = samples_of(area_songs.get(a, set())) - glob_set
+        budget = SPU_BYTES - gbytes - sum(song_bytes.get(x, 0) for x in area_songs.get(a, set())) - 2048
+        while sum(size(g) for g in own) > budget:
+            cand = sorted((g for g in own if g < 0xFFFFFFF0 and str(g - R) in index and scale.get(g, 1.0) > 0.5),
+                          key=lambda g: -size(g))
+            if not cand:
+                print('WARNING: area %d sound bank does not fit SPU RAM' % a)
+                break
+            g = cand[0]
+            sc = scale.get(g, 1.0) * 0.75
+            sc = 0.5 if sc < 0.5 else sc
+            data, num, den, pad, loopBlock = audio_pack.encode(rom, g - R, tool, tmp + '.s8', tmp + '.adpcm', sc)
+            flags, pitch, loop, n = struct.unpack_from('<IIII', rom, g - R)
+            by[g][1] = data
+            by[g][2] = int(pitch * sc) * num // den
+            scale[g] = sc
+    for p in (tmp + '.s8', tmp + '.adpcm'):
+        if os.path.exists(p):
+            os.remove(p)
+    if scale:
+        print('sound banks fitted: %d samples re-encoded at a lower rate (%s)' % (
+            len(scale), ', '.join('%x x%.2f' % (g - R, v) for g, v in sorted(scale.items()))))
+    return [tuple(by[it[0]]) for it in items]
+
+
 def main():
     rom = open(sys.argv[1], 'rb').read()
     sdir, odir = sys.argv[2], sys.argv[3]
@@ -95,6 +151,7 @@ def main():
         if os.path.exists(p):
             os.remove(p)
     items.sort(key=lambda t: t[0])
+    items = fit_banks(rom, sdir, odir, tool, voices, items)
     pos = {it[0]: k for k, it in enumerate(items)}
     table, data, size = [], bytearray(), {}
     for gba, d, rate, flags in items:

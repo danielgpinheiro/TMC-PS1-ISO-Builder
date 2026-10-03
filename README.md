@@ -14,9 +14,11 @@ cartridge directly; the PS1 can't, so everything is converted **once, on your co
 
 - **The ROM** → a virtual ROM on the disc: the game's data split into segments the PS1 loads per area and per room
   (with per-room load manifests, so the next room's data is usually already read when Link walks in).
-- **Song data and instruments** → the game's sequencer runs on the PS1's sound chip: its 271 samples converted to
-  SPU-ADPCM, loaded per area.
-- **Music** → the background music rendered once by agbplay (the GBA's sound engine) and streamed from the CD.
+- **Music and sound effects** → the game's own sequencer runs on the PS1's sound chip, like the GBA's: its 271 samples
+  converted to SPU-ADPCM and loaded with the songs as one sound bank per area (as Legend of Mana does per scene), so
+  the CD drive is free for the game's data.
+- **Per-area packs** → each area's most-needed data copied back to back on the disc and read at the area change, so
+  play inside the area rarely waits for the CD.
 - **Text** → the save messages reworded for the memory card.
 - **The executable and its code overlays** carry tables that are also in the ROM; they are shipped with those bytes
   taken out (`bin/files/holes.json` says where) and completed from your ROM, then checked against the original build's
@@ -34,8 +36,8 @@ Graphics are drawn by the PS1's GPU from the GBA's own tile, sprite and palette 
    python3 build_iso.py --rom /path/to/baserom.gba
    ```
    Optional: `--license licensea.dat` (see [the license file](#the-license-file)), `--out folder` (default `output/`).
-4. The disc image is `output/TMC-PS1.bin` + `TMC-PS1.cue` (about 176 MB), with its SHA-256 in `output/SHA256SUMS`.
-   The build takes about 4 minutes (most of it rendering the music; later builds reuse it).
+4. The disc image is `output/TMC-PS1.bin` + `TMC-PS1.cue` (about 58 MB), with its SHA-256 in `output/SHA256SUMS`.
+   The build takes about a minute.
 
 The builder verifies the image byte by byte (EDC/ECC, license sectors, every file) before it finishes.
 
@@ -47,7 +49,7 @@ use WSL.
 | Tool | What for |
 |---|---|
 | Python 3.8+ (no extra packages) | the converters |
-| a C compiler and a C++20 compiler (clang or gcc) | the SPU-ADPCM encoder and agbplay's music renderer, built on the fly |
+| a C compiler (clang or gcc) | the SPU-ADPCM encoder, built on the fly |
 | [mkpsxiso](https://github.com/Lameguy64/mkpsxiso) | writes the disc image |
 
 The builder finds `mkpsxiso` on your `PATH` or through the `MKPSXISO` environment variable.
@@ -86,7 +88,7 @@ sources (song names and ROM offsets, data label offsets, the per-area song sets)
 - **The Legend of Zelda: The Minish Cap**: Nintendo and Capcom (Flagship). This project is not affiliated with them.
 - **The Minish Cap decompilation**: [zeldaret](https://github.com/zeldaret/tmc) and contributors. **PC port**:
   [Mathéo Vignaud](https://github.com/MatheoVignaud/tmc) and contributors.
-- **agbplay** (music rendering): ipatix and contributors (LGPL-3.0).
+- **agbplay**: ipatix and contributors (LGPL-3.0); the executable's sound sequencer is a C port of agbplay's.
 - **psyqo / nugget / PCSX-Redux**: the PCSX-Redux authors. **EASTL / EABase**: Electronic Arts.
 - **[ps1-bare-metal](https://github.com/spicyjpeg/ps1-bare-metal)** (sound and CD-ROM driver model): spicyjpeg.
 - **[mkpsxiso](https://github.com/Lameguy64/mkpsxiso)**: Lameguy64 and contributors.

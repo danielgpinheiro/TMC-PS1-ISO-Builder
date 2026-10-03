@@ -68,6 +68,32 @@ def song_samples(rom, repo):
     return sorted(used)
 
 
+def encode(rom, w, tool, tmp_in, tmp_out, scale=1.0):
+    """DirectSound sample at ROM offset w -> (SPU ADPCM, num, den, pad, loopBlock); scale < 1 resamples the 8-bit PCM
+    first (linear, scale x the samples; the caller scales the pitch the same: docs/36 choice 122, an area's sound bank
+    that doesn't fit SPU RAM)"""
+    flags, pitch, loop, n = struct.unpack_from('<IIII', rom, w)
+    looped = bool(flags & 0x40000000) and loop < n
+    src = rom[w + 16:w + 16 + n]
+    if scale < 1.0:
+        sv = [b - 256 if b >= 128 else b for b in src]
+        n2 = max(28, int(n * scale))
+        out = []
+        for i in range(n2):
+            x = i / scale
+            k = int(x)
+            f = x - k
+            a = sv[min(k, n - 1)]
+            b = sv[min(k + 1, n - 1)]
+            out.append(int(round(a + (b - a) * f)))
+        src = bytes((v + 256) % 256 for v in out)
+        loop, n = min(int(loop * scale), n2 - 1), n2
+    open(tmp_in, 'wb').write(src)
+    r = subprocess.check_output([tool, tmp_in, tmp_out, '1' if looped else '0', str(loop), str(n)]).split()
+    blocks, pad, num, den, loopBlock = (int(x) for x in r)
+    return open(tmp_out, 'rb').read(), num, den, pad, loopBlock
+
+
 def main():
     rom = open(sys.argv[1], 'rb').read()
     out = sys.argv[2]
@@ -81,10 +107,7 @@ def main():
         mode = rom[w]
         flags, pitch, loop, n = struct.unpack_from('<IIII', rom, w)
         looped = bool(flags & 0x40000000) and loop < n
-        open(tmp_in, 'wb').write(rom[w + 16:w + 16 + n])
-        r = subprocess.check_output([tool, tmp_in, tmp_out, '1' if looped else '0', str(loop), str(n)]).split()
-        blocks, pad, num, den, loopBlock = (int(x) for x in r)
-        data = open(tmp_out, 'rb').read()
+        data, num, den, pad, loopBlock = encode(rom, w, tool, tmp_in, tmp_out)
         # check: the decoded samples against the source where they line up (before any resampling / padding)
         dec = decode(data)
         ref_n = n if not looped else (loop if num == den else 0)
