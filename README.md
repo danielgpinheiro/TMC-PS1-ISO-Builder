@@ -133,7 +133,8 @@ sources (song names and ROM offsets, data label offsets, the per-area song sets)
 - **The Legend of Zelda: The Minish Cap**: Nintendo and Capcom (Flagship). This project is not affiliated with them.
 - **The Minish Cap decompilation**: [zeldaret](https://github.com/zeldaret/tmc) and contributors. **PC port**:
   [Mathéo Vignaud](https://github.com/MatheoVignaud/tmc) and contributors.
-- **agbplay**: ipatix and contributors (LGPL-3.0); the executable's sound sequencer is a C port of agbplay's.
+- **agbplay**: ipatix and contributors (LGPL-3.0); the executable's sound sequencer is a C port of agbplay's; its source is in
+  [source/sound](source/sound).
 - **psyqo / nugget / PCSX-Redux**: the PCSX-Redux authors. **EASTL / EABase**: Electronic Arts.
 - **[ps1-bare-metal](https://github.com/spicyjpeg/ps1-bare-metal)** (sound and CD-ROM driver model): spicyjpeg.
 - **[mkpsxiso](https://github.com/Lameguy64/mkpsxiso)**: Lameguy64 and contributors.
