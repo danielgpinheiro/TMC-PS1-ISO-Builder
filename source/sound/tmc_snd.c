@@ -27,8 +27,7 @@ const RoomControls* PS1TmcRoomControls(void); /* ps1/tmc_vrom.c */
 #include "tmc_snd_pow2.h"
 #include "spu.hh"
 
-void* psyqo_malloc(size_t size);
-void psyqo_free(void* ptr);
+#include "psyqo/alloc.h"
 
 #define SND_PLAYERS 32
 #define SND_TRACK_POOL 96
